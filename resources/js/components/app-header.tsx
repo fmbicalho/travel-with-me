@@ -11,7 +11,7 @@ import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
 import { type BreadcrumbItem, type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Plane, Users, Menu, Search } from 'lucide-react';
+import { Languages, UserPlus, LayoutGrid, Plane, Users, Signpost, MessageCircle, Menu, Search } from 'lucide-react';
 import AppLogo from './app-logo';
 import AppLogoIcon from './app-logo-icon';
 
@@ -31,18 +31,28 @@ const mainNavItems: NavItem[] = [
         href: '/friends',
         icon: Users,
     },
+    {
+        title: 'Explore',
+        href: '/explore',
+        icon: Signpost,
+    },
+    {
+        title: 'Chat',
+        href: '/chat',
+        icon: MessageCircle,
+    },
 ];
 
 const rightNavItems: NavItem[] = [
     {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
+        title: 'Add Friend',
+        href: '/friends/invite',
+        icon: UserPlus,
     },
     {
         title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits',
-        icon: BookOpen,
+        href: 'settings/languages',
+        icon: Languages,
     },
 ];
 
@@ -78,7 +88,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                         <div className="flex flex-col space-y-4">
                                             {mainNavItems.map((item) => (
                                                 <Link key={item.title} href={item.href} className="flex items-center space-x-2 font-medium">
-                                                    {item.icon && <Icon iconNode={item.icon} className="h-5 w-5" />}
+                                                    {item.icon && <Icon iconNode={item.icon} className="h-4 w-4" />}
                                                     <span>{item.title}</span>
                                                 </Link>
                                             ))}
@@ -119,10 +129,10 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                             className={cn(
                                                 navigationMenuTriggerStyle(),
                                                 page.url === item.href && activeItemStyles,
-                                                'h-9 cursor-pointer px-3',
+                                                'h-9 cursor-pointer px-3 text-sm',
                                             )}
                                         >
-                                            {item.icon && <Icon iconNode={item.icon} className="mr-2 h-4 w-4" />}
+                                            {item.icon && <Icon iconNode={item.icon} className="mr-2 h-6 w-6" />}
                                             {item.title}
                                         </Link>
                                         {page.url === item.href && (
@@ -146,7 +156,6 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                             <TooltipTrigger>
                                                 <a
                                                     href={item.href}
-                                                    target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="group text-accent-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring ml-1 inline-flex h-9 w-9 items-center justify-center rounded-md bg-transparent p-0 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
                                                 >
@@ -165,8 +174,8 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="size-10 rounded-full p-1">
-                                    <Avatar className="size-8 overflow-hidden rounded-full">
-                                        <AvatarImage src={auth.user.avatar} alt={auth.user.name} />
+                                    <Avatar className="size-10 overflow-hidden rounded-full">
+                                        <AvatarImage src={auth.user.photo as string | undefined} alt={auth.user.name} />
                                         <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
                                             {getInitials(auth.user.name)}
                                         </AvatarFallback>

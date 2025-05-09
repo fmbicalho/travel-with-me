@@ -20,7 +20,7 @@ export default function Welcome() {
                     <div className="backdrop-blur-lg bg-white/10 border border-white/30 shadow-xl rounded-2xl p-10 text-white">
                         <div className="flex flex-col items-center gap-6">
                             <Link href={route('home')} className="flex items-center gap-2">
-                                <AppLogoIcon className="size-9 fill-current text-white" />
+                                <AppLogoIcon />
                                 <h1 className="text-3xl font-bold">Travel With Me</h1>
                             </Link>
 
@@ -31,7 +31,7 @@ export default function Welcome() {
                             <div className="w-full mt-8">
                                 {auth.user ? (
                                     <Link
-                                        href={route('dashboard')}
+                                        href={route('dashboard.index')}
                                         className="w-full block text-center rounded-lg border border-white/30 px-8 py-3 font-medium text-white hover:border-white/50 hover:bg-white/10 transition-colors"
                                     >
                                         Go to Dashboard
