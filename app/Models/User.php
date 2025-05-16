@@ -3,9 +3,9 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
@@ -36,6 +36,8 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    protected $appends = ['photo_url'];
 
     /**
      * Get the attributes that should be cast.
@@ -69,20 +71,53 @@ class User extends Authenticatable
     // Friendships
     public function friends()
     {
-        return $this->belongsToMany(User::class, 'friendships', 'user_id', 'friend_id')
-            ->withTimestamps()
-            ->as('friend');
+        return $this->belongsToMany(
+            User::class,
+            'friendships',
+            'user_id',
+            'friend_id'
+        )->withTimestamps();
+    }
+
+    public function friendOf()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'friendships',
+            'friend_id',
+            'user_id'
+        )->withTimestamps();
+    }
+
+    public function allFriends()
+    {
+        return $this->friends->merge($this->friendOf);
+    }
+
+    public function allFriendsWithMessages()
+    {
+        return $this->allFriends()->load(['sentMessages', 'receivedMessages']);
+    }
+
+    public function friendshipsAsUser()
+    {
+        return $this->hasMany(Friendship::class, 'user_id');
+    }
+
+    public function friendshipsAsFriend()
+    {
+        return $this->hasMany(Friendship::class, 'friend_id');
     }
 
     public function isFriendsWith(User $user)
     {
-        return Friendship::where(function ($query) use ($user) {
-            $query->where('user_id', $this->id)
-                ->where('friend_id', $user->id);
-        })->orWhere(function ($query) use ($user) {
-            $query->where('user_id', $user->id)
-                ->where('friend_id', $this->id);
-        })->exists();
+        return $this->friends()->where('id', $user->id)->exists() ||
+        $this->friendOf()->where('id', $user->id)->exists();
+    }
+
+    public function scopeExcludeCurrent($query)
+    {
+        return $query->where('id', '!=', auth()->id());
     }
 
     public function createdTravels(): HasMany
@@ -95,8 +130,8 @@ class User extends Authenticatable
         return $this->hasManyThrough(
             TravelUpdate::class,
             Travel::class,
-            'creator_id',  // Foreign key on travels table
-            'travel_id',   // Foreign key on travel_updates table
+            'creator_id', // Foreign key on travels table
+            'travel_id',  // Foreign key on travel_updates table
             'id',         // Local key on users table
             'id'          // Local key on travels table
         );
@@ -111,4 +146,26 @@ class User extends Authenticatable
     {
         return $this->hasMany(Message::class, 'sender_id');
     }
+
+    // In your User model
+    public function getPhotoUrlAttribute()
+    {
+        if (!$this->attributes['photo']) {
+            return null;
+        }
+
+        // If it's already a full URL
+        if (filter_var($this->attributes['photo'], FILTER_VALIDATE_URL)) {
+            return $this->attributes['photo'];
+        }
+
+        // For locally stored files, ensure we don't duplicate 'storage'
+        return asset('storage/' . ltrim($this->attributes['photo'], 'storage/'));
+    }
+
+    public function getPhotoAttribute()
+    {
+        return $this->photo_url;
+    }
+
 }

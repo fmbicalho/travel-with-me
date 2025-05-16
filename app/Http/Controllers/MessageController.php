@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Message;
@@ -10,73 +9,97 @@ use Inertia\Inertia;
 
 class MessageController extends Controller
 {
-    public function index(User $user)
-{
-    // Get conversation between authenticated user and selected user
-    $messages = Message::where(function($query) use ($user) {
-        $query->where('sender_id', Auth::id())
-              ->where('receiver_id', $user->id);
-    })->orWhere(function($query) use ($user) {
-        $query->where('sender_id', $user->id)
-              ->where('receiver_id', Auth::id());
-    })->orderBy('created_at', 'desc')
-      ->paginate(20);
-
-    // Get friendships with last message info
-    $friendships = Auth::user()->friends()
-        ->with(['friend' => function($query) {
-            $query->with(['sentMessages', 'receivedMessages']);
-        }])
-        ->get()
-        ->map(function ($friendship) {
-            // Get the last message between auth user and this friend
-            $lastMessage = Message::where(function($query) use ($friendship) {
+    public function index()
+    {
+        // Get all friends with their last message and unread count
+        $friends = Auth::user()->allFriends()->map(function ($friend) {
+            $lastMessage = Message::where(function ($query) use ($friend) {
                 $query->where('sender_id', Auth::id())
-                      ->where('receiver_id', $friendship->friend_id);
-            })->orWhere(function($query) use ($friendship) {
-                $query->where('sender_id', $friendship->friend_id)
-                      ->where('receiver_id', Auth::id());
+                    ->where('receiver_id', $friend->id);
+            })->orWhere(function ($query) use ($friend) {
+                $query->where('sender_id', $friend->id)
+                    ->where('receiver_id', Auth::id());
             })->latest()
-              ->first();
+                ->first();
 
-            // Count unread messages
-            $unreadCount = Message::where('sender_id', $friendship->friend_id)
+            $unreadCount = Message::where('sender_id', $friend->id)
                 ->where('receiver_id', Auth::id())
                 ->whereNull('read_at')
                 ->count();
 
             return [
-                'id' => $friendship->id,
-                'friend' => [
-                    'id' => $friendship->friend->id,
-                    'name' => $friendship->friend->name,
-                    'photo' => $friendship->friend->photo,
-                    'last_message' => $lastMessage?->content,
-                    'last_message_time' => $lastMessage?->created_at,
-                    'unread_count' => $unreadCount,
-                ]
+                'id'                => $friend->id,
+                'name'              => $friend->name,
+                'photo'             => $friend->photo_url,
+                'last_message'      => $lastMessage?->content,
+                'last_message_time' => $lastMessage?->created_at,
+                'unread_count'      => $unreadCount,
             ];
         });
 
-    return Inertia::render('Chat/Conversation', [
-        'messages' => $messages,
-        'friend' => $user->only(['id', 'name', 'photo']),
-        'friendships' => $friendships,
-    ]);
-}
+        return Inertia::render('Messages/Index', [
+            'user' => Auth::user(),
+            'friends' => $friends,
+        ]);
+    }
+
+    public function show(User $user)
+    {
+        // Mark unread messages as read
+        Message::where('sender_id', $user->id)
+            ->where('receiver_id', Auth::id())
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        // Get the conversation
+        $messages = Message::with(['sender', 'receiver'])
+            ->where(function ($query) use ($user) {
+                $query->where('sender_id', Auth::id())
+                    ->where('receiver_id', $user->id);
+            })
+            ->orWhere(function ($query) use ($user) {
+                $query->where('sender_id', $user->id)
+                    ->where('receiver_id', Auth::id());
+            })
+            ->orderBy('created_at', 'asc')
+            ->paginate(20);
+
+        // Get friends list for sidebar
+        $friends = Auth::user()->allFriends()->map(function ($friend) {
+            $unreadCount = Message::where('sender_id', $friend->id)
+                ->where('receiver_id', Auth::id())
+                ->whereNull('read_at')
+                ->count();
+
+            return [
+                'id'           => $friend->id,
+                'name'         => $friend->name,
+                'photo'        => $friend->photo_url,
+                'unread_count' => $unreadCount,
+            ];
+        });
+
+        return Inertia::render('Messages/Show', [
+            'user'     => Auth::user(),
+            'friend'   => $user->only(['id', 'name', 'photo_url']),
+            'messages' => $messages,
+            'friends'  => $friends,
+        ]);
+    }
 
     public function store(Request $request, User $user)
     {
         $request->validate([
-            'content' => 'required|string|max:1000'
+            'content' => 'required|string|max:1000',
         ]);
 
         $message = Auth::user()->sentMessages()->create([
             'receiver_id' => $user->id,
-            'content' => $request->content
+            'content'     => $request->content,
         ]);
 
-        return response()->json($message, 201);
+        // Redirect back to the conversation
+        return redirect()->route('messages.show', $user->id);
     }
 
     public function destroy(Message $message)

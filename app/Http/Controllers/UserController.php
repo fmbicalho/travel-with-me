@@ -4,59 +4,100 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class UserController extends Controller
 {
     public function index()
     {
-        $users = User::where('id', '!=', Auth::id())->get([
-            'id', 'name', 'nickname', 'email', 'photo', 'role',
+        $users = User::excludeCurrent()
+            ->select('id', 'name', 'nickname', 'email', 'photo', 'role', 'created_at')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id'         => $user->id,
+                    'name'       => $user->name,
+                    'nickname'   => $user->nickname,
+                    'email'      => $user->email,
+                    'photo'      => $user->photo_url,
+                    'role'       => $user->role,
+                    'created_at' => $user->created_at,
+                ];
+            });
+
+        return response()->json([
+            'data'  => $users,
+            'count' => $users->count(),
         ]);
-        return response()->json($users);
     }
 
-    public function show($id)
+    public function show(User $user)
     {
-        $user = User::select('id', 'name', 'nickname', 'email', 'photo', 'role')
-            ->findOrFail($id);
-        return response()->json($user);
+        return response()->json([
+            'data' => [
+                'id'       => $user->id,
+                'name'     => $user->name,
+                'nickname' => $user->nickname,
+                'email'    => $user->email,
+                'photo'    => $user->photo_url,
+                'role'     => $user->role,
+            ],
+        ]);
     }
 
     public function profile()
     {
+        $user = Auth::user()->loadCount(['friends', 'travels']);
+
         return Inertia::render('Profile', [
-            'user' => Auth::user(),
+            'user' => [
+                 ...$user->toArray(),
+                'photo' => $user->photo_url,
+            ],
         ]);
     }
 
     public function updatePhoto(Request $request)
     {
-        $request->validate([
-            'photo' => 'required|image|max:2048',
+        $validated = $request->validate([
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
-        $path = $request->file('photo')->store('photos', 'public');
+        try {
+            if (Auth::user()->photo) {
+                $oldPhotoPath = ltrim(Auth::user()->photo, 'storage/');
+                Storage::disk('public')->delete($oldPhotoPath);
+            }
 
-        $user        = auth()->user();
-        $user->photo = 'storage/' . $path;
-        $user->save();
+            $path = $request->file('photo')->store('photos', 'public');
 
-        return back();
+            Auth::user()->update([
+                'photo' => $path,
+            ]);
+
+            return back()->with('success', 'Photo updated successfully!');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error updating photo: ' . $e->getMessage());
+        }
     }
 
     public function updateNickname(Request $request)
     {
-        $request->validate([
-            'nickname' => 'required|string|max:20|unique:users,nickname,' . Auth::id(),
+        $validated = $request->validate([
+            'nickname' => [
+                'required',
+                'string',
+                'max:20',
+                'unique:users,nickname,' . Auth::id(),
+                'regex:/^[a-zA-Z0-9_\-]+$/',
+            ],
         ]);
 
-        $user           = Auth::user();
-        $user->nickname = $request->nickname;
-        $user->save();
+        Auth::user()->update($validated);
 
-        return back()->with('message', 'Nickname atualizado com sucesso.');
+        return back()->with('success', 'Nickname atualizado com sucesso.');
     }
-
 }

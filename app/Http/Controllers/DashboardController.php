@@ -27,7 +27,7 @@ class DashboardController extends Controller
         $closestTravel = $this->getClosestTravelDetails($user);
 
         return Inertia::render('Dashboard/Index', [
-            'user' => $userMetrics,
+            'user' => array_merge($userMetrics, ['photo' => $user->photo_url]),
             'metrics' => array_merge($travelStats, $socialData, [
                 'closestTravel' => $closestTravel
             ])
@@ -41,10 +41,11 @@ class DashboardController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'nickname' => $user->nickname,
-            'photo' => $user->photo,
+            'photo' => $user->photo_url,
             'travels' => $user->travels()->count(),
             'friends' => $user->friends()->count(),
             'totalUpdates' => $user->travelUpdates()->count(),
+            'created_at' => $user->created_at->toISOString(),
         ];
     }
 
@@ -83,8 +84,12 @@ class DashboardController extends Controller
                     return [
                         'id' => $message->id,
                         'content' => $message->content,
-                        'created_at' => $message->created_at->diffForHumans(),
-                        'sender' => $message->sender->only(['id', 'name', 'photo'])
+                        'created_at' => $message->created_at->toISOString(),
+                        'sender' => [
+                            'id' => $message->sender->id,
+                            'name' => $message->sender->name,
+                            'photo' => $message->sender->photo_url
+                        ]
                     ];
                 }),
             'appUpdates' => AppUpdate::latest()
@@ -146,7 +151,11 @@ class DashboardController extends Controller
                         'title' => $update->title,
                         'description' => $update->description,
                         'created_at' => $update->created_at->diffForHumans(),
-                        'creator' => $update->creator->only(['id', 'name', 'photo'])
+                        'creator' => [
+                            'id' => $update->creator->id,
+                            'name' => $update->creator->name,
+                            'photo' => $update->creator->photo_url
+                        ]
                     ];
                 }),
             'topUpdaters' => $travel->updates()
@@ -158,7 +167,11 @@ class DashboardController extends Controller
                 ->get()
                 ->map(function ($updater) {
                     return [
-                        'user' => $updater->creator->only(['id', 'name', 'photo']),
+                        'user' => [
+                            'id' => $updater->creator->id,
+                            'name' => $updater->creator->name,
+                            'photo' => $updater->creator->photo_url
+                        ],
                         'update_count' => $updater->update_count
                     ];
                 })

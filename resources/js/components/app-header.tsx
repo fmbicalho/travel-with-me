@@ -38,7 +38,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Chat',
-        href: '/chat',
+        href: '/message',
         icon: MessageCircle,
     },
 ];

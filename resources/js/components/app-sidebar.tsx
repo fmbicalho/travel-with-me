@@ -29,7 +29,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Chat',
-        href: '/chat',
+        href: '/messages',
         icon: MessageCircle,
     },
 ];
@@ -41,7 +41,7 @@ const footerNavItems: NavItem[] = [
         icon: UserPlus,
     },
     {
-        title: 'Documentation',
+        title: 'Change Language',
         href: 'settings/languages',
         icon: Languages,
     },

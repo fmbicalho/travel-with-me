@@ -10,6 +10,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\FriendshipController;
 use App\Http\Controllers\FriendInviteController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\ExploreController;
+use App\Http\Controllers\UpdateController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -41,27 +43,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     // Chat routes
-    Route::prefix('chat')->group(function () {
+    Route::prefix('messages')->group(function () {
         Route::get('/', [MessageController::class, 'index'])->name('messages.index');
+        Route::get('/{user}', [MessageController::class, 'show'])->name('messages.show');
+        Route::post('/{user}', [MessageController::class, 'store'])->name('messages.store');
     });
 
     // Explore routes
-    Route::get('explore', function () {
-        return Inertia::render('explore');
-    })->name('explore');
+    Route::prefix('explore')->group(function () {
+        Route::get('/', [ExploreController::class, 'index'])->name('explore.index');
+        Route::get('/{travel}', [ExploreController::class, 'show'])->name('explore.show');
+    });
 
-    //Update routes
-    Route::get('updates', function () {
-        return Inertia::render('updates');
-    })->name('updates.index');
-
+    // Updates routes
+    Route::prefix('updates')->group(function () {
+        Route::get('/', [UpdateController::class, 'index'])->name('updates.index');
+        Route::post('/{travel}', [UpdateController::class, 'store'])->name('updates.store');
+        Route::put('/{update}', [UpdateController::class, 'update'])->name('updates.update');
+        Route::delete('/{update}', [UpdateController::class, 'destroy'])->name('updates.destroy');
+    });
 
     Route::get('profile', [UserController::class, 'profile'])->name('profile');
     Route::post('profile/photo', [UserController::class, 'updatePhoto'])->name('profile.updatePhoto');
     Route::post('profile/nickname', [UserController::class, 'updateNickname'])->name('profile.updateNickname');
-
-    
-
 });
 
 require __DIR__.'/settings.php';
