@@ -23,7 +23,9 @@ class TravelPolicy
      */
     public function view(User $user, Travel $travel): bool
     {
-        return $travel->users->contains($user->id) || $travel->is_public;
+        return $travel->creator_id === $user->id || 
+               $travel->users->contains($user->id) || 
+               $travel->is_public;
     }
 
     /**
@@ -39,7 +41,7 @@ class TravelPolicy
      */
     public function update(User $user, Travel $travel): bool
     {
-        return $travel->creator_id === $user->id;
+        return $travel->creator_id === $user->id || $travel->isAdmin($user);
     }
 
     /**
@@ -55,6 +57,32 @@ class TravelPolicy
      */
     public function manage(User $user, Travel $travel): bool
     {
-        return $travel->creator_id === $user->id;
+        return $travel->creator_id === $user->id || $travel->isAdmin($user);
+    }
+
+    /**
+     * Determine whether the user can view invites for the travel.
+     */
+    public function viewInvites(User $user, Travel $travel): bool
+    {
+        // Load the users relationship if not already loaded
+        if (!$travel->relationLoaded('users')) {
+            $travel->load('users');
+        }
+        return $travel->creator_id === $user->id || 
+               $travel->users->contains($user->id) || 
+               $travel->isAdmin($user);
+    }
+
+    /**
+     * Determine whether the user can invite others to the travel.
+     */
+    public function invite(User $user, Travel $travel): bool
+    {
+        // Load the users relationship if not already loaded
+        if (!$travel->relationLoaded('users')) {
+            $travel->load('users');
+        }
+        return $travel->creator_id === $user->id || $travel->isAdmin($user);
     }
 } 

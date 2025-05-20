@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\FriendInvite;
 use App\Models\Friendship;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -21,15 +22,20 @@ class FriendInviteController extends Controller
 
     public function search(Request $request)
     {
+        $request->validate([
+            'email' => 'required|email',
+        ]);
+
         $email = $request->query('email');
 
-        $user = User::where('email', $email)->first();
+        // Case-insensitive search for MySQL
+        $foundUser = User::whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
 
-        if (! $user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        return response()->json($user);
+        return Inertia::render('Friends/Invite', [
+            'user'                => auth()->user()->only(['id', 'name', 'email']),
+            'foundUser'           => $foundUser ? $foundUser->only(['id', 'name', 'email']) : null,
+            'existingFriendships' => auth()->user()->friends()->pluck('id')->toArray(),
+        ]);
     }
 
     // Send a friend invite
@@ -37,23 +43,27 @@ class FriendInviteController extends Controller
     {
         $receiver = User::findOrFail($receiverId);
 
-        // Check if the user is trying to send a request to themselves
+        // Prevent self-invite
         if (Auth::id() == $receiverId) {
-            return redirect()->back()->with('error', 'You cannot send a friend invite to yourself.');
+            return redirect()->route('friends.index')->with('error', 'You cannot send a friend invite to yourself.');
         }
 
-        // Check if an invite already exists or if they are already friends
-        if (FriendInvite::where('sender_id', Auth::id())->where('receiver_id', $receiverId)->exists() || Auth::user()->isFriendsWith($receiver)) {
-            return redirect()->back()->with('error', 'Friend invite already exists or you are already friends.');
+        // Check for existing invite or friendship
+        if (FriendInvite::where([
+            'sender_id'   => Auth::id(),
+            'receiver_id' => $receiverId,
+        ])->exists() || Auth::user()->isFriendsWith($receiver)) {
+            return redirect()->route('friends.index')->with('error', 'Friend invite already exists or you are already friends.');
         }
 
-        // Create a new invite
+        // Create invite
         FriendInvite::create([
             'sender_id'   => Auth::id(),
             'receiver_id' => $receiverId,
+            'status'      => 'pending',
         ]);
 
-        return redirect()->back()->with('success', 'Friend invite sent.');
+        return redirect()->route('friends.index')->with('success', 'Friend invite sent successfully!');
     }
 
     // Accept a friend invite

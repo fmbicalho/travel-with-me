@@ -12,7 +12,7 @@ class MessageController extends Controller
     public function index()
     {
         // Get all friends with their last message and unread count
-        $friends = Auth::user()->allFriends()->map(function ($friend) {
+        $friends = Auth::user()->allFriends()->get()->map(function ($friend) {
             $lastMessage = Message::where(function ($query) use ($friend) {
                 $query->where('sender_id', Auth::id())
                     ->where('receiver_id', $friend->id);
@@ -30,6 +30,10 @@ class MessageController extends Controller
             return [
                 'id'                => $friend->id,
                 'name'              => $friend->name,
+                'last_message'      => $lastMessage?->content,
+                'last_message_time' => $lastMessage?->created_at,
+                'unread_count'      => $unreadCount,
+                'email'            => $friend->email,
                 'photo'             => $friend->photo_url,
                 'last_message'      => $lastMessage?->content,
                 'last_message_time' => $lastMessage?->created_at,
@@ -65,7 +69,7 @@ class MessageController extends Controller
             ->paginate(20);
 
         // Get friends list for sidebar
-        $friends = Auth::user()->allFriends()->map(function ($friend) {
+        $friends = Auth::user()->allFriends()->get()->map(function ($friend) {
             $unreadCount = Message::where('sender_id', $friend->id)
                 ->where('receiver_id', Auth::id())
                 ->whereNull('read_at')

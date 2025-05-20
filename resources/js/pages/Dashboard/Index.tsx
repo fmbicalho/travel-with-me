@@ -419,7 +419,7 @@ export default function Dashboard({ user, metrics }: DashboardProps) {
                                         {metrics.closestTravel.topUpdaters.map((updater, i) => (
                                             <Link
                                                 key={updater.user.id}
-                                                href={route('profile.show', updater.user.id)}
+                                                href={route('profile', updater.user.id)}
                                                 className="flex flex-col items-center text-center p-3 bg-white/50 dark:bg-neutral-700/50 rounded-lg hover:bg-white/70 dark:hover:bg-neutral-600/50 transition-colors"
                                             >
                                                 <div className="relative">

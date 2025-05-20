@@ -7,7 +7,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Chat',
         href: '/message',
-    },
+    }, 
 ];
 
 interface User {

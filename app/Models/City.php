@@ -13,11 +13,15 @@ class City extends Model
         'description', 
         'image', 
         'travel_id',
+        'arrive_date',
+        'depart_date',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'arrive_date' => 'date',
+        'depart_date' => 'date',
     ];
 
     public function travel(): BelongsTo

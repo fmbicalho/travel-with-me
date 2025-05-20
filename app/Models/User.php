@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 
 class User extends Authenticatable
 {
@@ -76,7 +77,9 @@ class User extends Authenticatable
             'friendships',
             'user_id',
             'friend_id'
-        )->withTimestamps();
+        )
+            ->withTimestamps()
+            ->select('users.id', 'users.name', 'users.email', 'users.photo', 'users.nickname');
     }
 
     public function friendOf()
@@ -86,12 +89,28 @@ class User extends Authenticatable
             'friendships',
             'friend_id',
             'user_id'
-        )->withTimestamps();
+        )
+            ->withTimestamps()
+            ->select('users.id', 'users.name', 'users.email', 'users.photo', 'users.nickname');
     }
 
     public function allFriends()
     {
-        return $this->friends->merge($this->friendOf);
+        return User::query()
+            ->select('users.id', 'users.name', 'users.email', 'users.photo', 'users.nickname')
+            ->where('users.id', '!=', $this->id)
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('friendships')
+                    ->where(function ($q) {
+                        $q->where('friendships.user_id', $this->id)
+                            ->whereRaw('friendships.friend_id = users.id');
+                    })
+                    ->orWhere(function ($q) {
+                        $q->where('friendships.friend_id', $this->id)
+                            ->whereRaw('friendships.user_id = users.id');
+                    });
+            });
     }
 
     public function allFriendsWithMessages()
@@ -111,8 +130,16 @@ class User extends Authenticatable
 
     public function isFriendsWith(User $user)
     {
-        return $this->friends()->where('id', $user->id)->exists() ||
-        $this->friendOf()->where('id', $user->id)->exists();
+        return DB::table('friendships')
+            ->where(function ($query) use ($user) {
+                $query->where('user_id', $this->id)
+                    ->where('friend_id', $user->id);
+            })
+            ->orWhere(function ($query) use ($user) {
+                $query->where('user_id', $user->id)
+                    ->where('friend_id', $this->id);
+            })
+            ->exists();
     }
 
     public function scopeExcludeCurrent($query)
@@ -150,7 +177,7 @@ class User extends Authenticatable
     // In your User model
     public function getPhotoUrlAttribute()
     {
-        if (!$this->attributes['photo']) {
+        if (! $this->attributes['photo']) {
             return null;
         }
 

@@ -1,5 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { type User } from '@/types/index';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,12 +17,6 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/travels/create',
     },
 ];
-
-interface User {
-    id: number;
-    name: string;
-    email: string;
-}
 
 interface PageProps {
     auth: {
