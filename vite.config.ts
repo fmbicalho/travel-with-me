@@ -25,5 +25,5 @@ export default defineConfig({
     server: { 
         hmr: { host: 'localhost' }
     },
-    base: 'https://travel-with-me-ndtb.onrender.com/',
+    base: 'https://travelwithme25.netlify.app',
 });
