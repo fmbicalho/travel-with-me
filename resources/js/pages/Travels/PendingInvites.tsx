@@ -10,8 +10,12 @@ import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Travels',
+        title: 'Trips',
         href: '/travels',
+    },
+    {
+        title: 'Details',
+        href: '#',
     },
     {
         title: 'Pending Invites',
@@ -127,9 +131,9 @@ export default function PendingInvites({ auth, invites, flash = { success: undef
                                                             {invite.travel?.title}
                                                         </Link>
                                                         <div className="flex items-center space-x-2">
-                                                            {invite.sender?.profile_photo_url ? (
+                                                            {invite.sender?.photo ? (
                                                                 <img
-                                                                    src={invite.sender.profile_photo_url}
+                                                                    src={invite.sender.photo}
                                                                     alt={invite.sender.name}
                                                                     className="w-6 h-6 rounded-full"
                                                                 />

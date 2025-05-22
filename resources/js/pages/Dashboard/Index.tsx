@@ -85,11 +85,11 @@ export default function Dashboard({ user, metrics }: DashboardProps) {
     }, [] as typeof metrics.lastMessages).slice(0, 3);
 
     // Calculate days since account creation
-    const daysSinceCreation = user.created_at 
-    ? Math.floor((new Date().getTime() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)): 0;
+    const daysSinceCreation = user.created_at
+        ? Math.floor((new Date().getTime() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
     // Format countdown days
-    const formattedCountdown = metrics.closestTravel.countdown > 0 
+    const formattedCountdown = metrics.closestTravel.countdown > 0
         ? `${Math.floor(metrics.closestTravel.countdown)} ${metrics.closestTravel.countdown === 1 ? 'day' : 'days'} left`
         : '';
 
@@ -267,26 +267,34 @@ export default function Dashboard({ user, metrics }: DashboardProps) {
 
                 {/* Travel Stats Section */}
                 <div className="grid md:grid-cols-3 gap-6">
-
                     <div className="bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-lg opacity-80">Total Travels</p>
-                                <p className="text-3xl font-bold">{metrics.totalTravels}</p>
-                                {metrics.travelsPerYear && Object.keys(metrics.travelsPerYear).length > 0 && (
-                                    <p className="text-sm opacity-80 mt-1">
-                                        {Object.entries(metrics.travelsPerYear).map(([year, count]) => (
-                                            <span key={year}>{year}: {count} </span>
-                                        ))}
-                                    </p>
-                                )}
+                        <Link href={route('travels.index')}>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-lg opacity-80">Total Trips</p>
+                                    <p className="text-3xl font-bold">{metrics.totalTravels}</p>
+                                    {metrics.travelsPerYear && Object.keys(metrics.travelsPerYear).length > 0 && (
+                                        <p className="text-sm opacity-80 mt-1">
+                                            {Object.entries(metrics.travelsPerYear)
+                                                .filter(([year]) => year === new Date().getFullYear().toString())
+                                                .map(([year, count]) => (
+                                                    <span key={year}>In {year} you have {count} trips<br /></span>
+                                                ))}
+                                            {Object.entries(metrics.travelsPerYear)
+                                                .filter(([year]) => year === (new Date().getFullYear() + 1).toString())
+                                                .map(([year, count]) => (
+                                                    <span key={year}>And {count} trips next year!</span>
+                                                ))}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="bg-white/20 p-3 rounded-full">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                                    </svg>
+                                </div>
                             </div>
-                            <div className="bg-white/20 p-3 rounded-full">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-                                </svg>
-                            </div>
-                        </div>
+                        </Link>
                     </div>
 
                     <div className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow">
@@ -454,7 +462,7 @@ export default function Dashboard({ user, metrics }: DashboardProps) {
                     ) : (
                         <div className="text-center py-8">
                             <p className="text-lg text-neutral-600 dark:text-neutral-400 mb-4">
-                                You don't have any upcoming travels planned yet.
+                                You don't have any upcoming Trips planned yet.
                             </p>
                             <Link
                                 href={route('travels.create')}

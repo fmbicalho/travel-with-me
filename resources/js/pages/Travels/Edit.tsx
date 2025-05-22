@@ -19,7 +19,7 @@ const locations: Location[] = locationsData;
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Travels',
+        title: 'Trips',
         href: '/travels',
     },
     {

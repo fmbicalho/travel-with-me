@@ -13,6 +13,9 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ExploreController;
 use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\TravelInviteController;
+use App\Http\Controllers\FlyingTicketController;
+use App\Http\Controllers\HotelReservationController;
+use App\Http\Controllers\TransportationsController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\HotelController;
@@ -66,6 +69,39 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Updates routes
         Route::get('/updates', [TravelController::class, 'index'])->name('travels.updates.index');
+
+        
+    });
+
+    // Flying Ticket routes
+    Route::prefix('flying-tickets')->group(function () {
+        Route::get('/', [FlyingTicketController::class, 'index'])->name('flying-tickets.index');
+        Route::post('/', [FlyingTicketController::class, 'store'])->name('flying-tickets.store');
+        Route::put('/{flyingTicket}', [FlyingTicketController::class, 'update'])->name('flying-tickets.update');
+        Route::delete('/{flyingTicket}', [FlyingTicketController::class, 'destroy'])->name('flying-tickets.destroy');
+        Route::get('/total-price/{travelId}', [FlyingTicketController::class, 'getTotalPrice'])->name('flying-tickets.total-price');
+        Route::get('/by-status/{travelId}', [FlyingTicketController::class, 'getTicketByStatus'])->name('flying-tickets.by-status');
+    });
+
+    // Hotel Reservation routes
+    Route::prefix('hotel-reservations')->group(function () {
+        Route::get('/', [HotelReservationController::class, 'index'])->name('hotel-reservations.index');
+        Route::post('/', [HotelReservationController::class, 'store'])->name('hotel-reservations.store');
+        Route::put('/{hotelReservation}', [HotelReservationController::class, 'update'])->name('hotel-reservations.update');
+        Route::delete('/{hotelReservation}', [HotelReservationController::class, 'destroy'])->name('hotel-reservations.destroy');
+        Route::get('/total-price/{travelId}', [HotelReservationController::class, 'getTotalPrice'])->name('hotel-reservations.total-price');
+        Route::get('/by-status/{travelId}', [HotelReservationController::class, 'getReservationByStatus'])->name('hotel-reservations.by-status');
+    });
+
+    // Transportations routes
+    Route::prefix('transportations')->group(function () {
+        Route::get('/', [TransportationsController::class, 'index'])->name('transportations.index');
+        Route::post('/', [TransportationsController::class, 'store'])->name('transportations.store');
+        Route::put('/{transportation}', [TransportationsController::class, 'update'])->name('transportations.update');
+        Route::delete('/{transportation}', [TransportationsController::class, 'destroy'])->name('transportations.destroy');
+        Route::get('/total-price/{travelId}', [TransportationsController::class, 'getTotalPrice'])->name('transportations.total-price');
+        Route::get('/by-status/{travelId}', [TransportationsController::class, 'getReservationByStatus'])->name('transportations.by-status');
+        Route::get('/total-price-by-type/{travelId}/{type}', [TransportationsController::class, 'getTotalPriceByType'])->name('transportations.total-price-by-type');
     });
 
     // Friend routes

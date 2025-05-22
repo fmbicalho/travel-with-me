@@ -9,11 +9,11 @@ import Textarea from '@/components/ui/textarea';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Travels',
+        title: 'Trips',
         href: '/travels',
     },
     {
-        title: 'Create New Travel',
+        title: 'Create New Trip',
         href: '/travels/create',
     },
 ];

@@ -22,7 +22,7 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Travels',
+        title: 'Trips',
         href: '/travels',
         icon: Plane,
     },

@@ -2,13 +2,27 @@ import AppLayout from '@/layouts/app-layout';
 import { useState } from 'react';
 import { type BreadcrumbItem } from '@/types';
 import type { User } from '@/types/index';
-import type { Travel, City, Hotel, Restaurant, Spot } from '@/types/travel';
+import type { Travel, City, Hotel, Restaurant, Spot, FlyingTicket, HotelReservation, Transportations } from '@/types/travel';
 import { Head, Link } from '@inertiajs/react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FaPlaneDeparture, FaBus, FaHotel, FaMapMarkerAlt, FaUsers, FaCalendarAlt, FaMoneyBillWave, FaCity } from 'react-icons/fa';
 import { FiArrowLeft, FiEdit2, FiMap, FiUserPlus, FiPlus } from 'react-icons/fi';
+import FlyingTicketModal from '../../components/ui/FlyingTicketModal';
+import HotelReservationModal from '../../components/ui/HotelReservationModal';
+import TransportationsModal from '../../components/ui/TransportationsModal';
 import { Button } from '@/components/ui/button';
 import locationsData from '../../../jsons/locations.json';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Trips',
+        href: '/travels',
+    },
+    {
+        title: 'Details',
+        href: '#',
+    },
+];
 
 interface PageProps {
     auth: {
@@ -20,20 +34,12 @@ interface PageProps {
             restaurants: Restaurant[];
             spots: Spot[];
         })[];
+        flying_tickets?: FlyingTicket[];
+        hotel_reservations?: HotelReservation[];
+        transportations?: Transportations[];
     };
     canEdit?: boolean;
 }
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Travels',
-        href: '/travels',
-    },
-    {
-        title: 'Details',
-        href: '#',
-    },
-];
 
 const NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = "AIzaSyAOVYRIgupAurZup5y1PRh8Ismb1A3lLao";
 
@@ -45,6 +51,8 @@ type TimelineItem = {
 };
 
 export default function Show({ auth, travel, canEdit = false }: PageProps) {
+    type Expense = { price?: number };
+
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -61,34 +69,44 @@ export default function Show({ auth, travel, canEdit = false }: PageProps) {
         });
     };
 
+    const formatEuro = (value: number) => {
+        return new Intl.NumberFormat('de-DE', {
+            style: 'currency',
+            currency: 'EUR',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(value);
+    };
+
     const duration = calculateDuration(travel.start_date, travel.end_date);
-    type Expense = { price?: number };
-    const flight_expenses = travel.flight_expenses || 0;
-    const hotel_expenses = travel.hotel_expenses || 0;
-    const transportation_expenses = travel.transportation_expenses || 0;
-    const total_expenses =
-        (typeof flight_expenses === 'object' && flight_expenses !== null
-            ? Array.isArray(flight_expenses)
-                ? (flight_expenses as Expense[]).reduce((sum, fe) => sum + (fe.price || 0), 0)
-                : (flight_expenses as Expense).price || 0
-            : 0) +
-        (typeof hotel_expenses === 'object' && hotel_expenses !== null
-            ? Array.isArray(hotel_expenses)
-                ? (hotel_expenses as Expense[]).reduce((sum, he) => sum + (he.price || 0), 0)
-                : (hotel_expenses as Expense).price || 0
-            : 0) +
-        (typeof transportation_expenses === 'object' && transportation_expenses !== null
-            ? Array.isArray(transportation_expenses)
-                ? (transportation_expenses as Expense[]).reduce((sum, te) => sum + (te.price || 0), 0)
-                : (transportation_expenses as Expense).price || 0
-            : 0);
-    const total_expenses_formatted = total_expenses > 0 ? `$${total_expenses}` : 'No expenses registered yet';
-    const hasExpenses = total_expenses > 0;
+    const flight_expenses = travel.flying_tickets || [];
+    const hotel_expenses = travel.hotel_reservations || [];
+    const transportation_expenses = travel.transportations || [];
+    const flightTotal = flight_expenses.reduce<number>((sum, fe) => sum + (Number(fe.price || 0)), 0);
+    const hotelTotal = hotel_expenses.reduce<number>((sum, he) => sum + (Number(he.price || 0)), 0);
+    const transportTotal = transportation_expenses.reduce<number>((sum, te) => sum + (Number(te.price || 0)), 0);
+    const total_expenses = flightTotal + hotelTotal + transportTotal;
+    const total_expenses_formatted = total_expenses > 0
+        ? formatEuro(total_expenses)
+        : 'No expenses registered yet';
     const timeline: TimelineItem[] = travel.timeline || generateHourlyTimeline(travel.start_date, travel.end_date);
     const cities = travel.cities;
     const [expandedCityIndex, setExpandedCityIndex] = useState<number | null>(null);
     const countryData = locationsData.find(location => location.country === travel.destination);
     const countryBanner = countryData?.banner;
+    const [isFlyingTicketModalOpen, setFlyingTicketModalOpen] = useState(false);
+    const [isHotelReservationModalOpen, setHotelReservationModalOpen] = useState(false);
+    const [isTransportationModalOpen, setTransportationModalOpen] = useState(false);
+    const [expandedSection, setExpandedSection] = useState<{
+        tickets: boolean;
+        reservations: boolean;
+        transportations: boolean;
+    }>({
+        tickets: false,
+        reservations: false,
+        transportations: false
+    });
+
 
     return (
         <AppLayout user={auth.user} breadcrumbs={breadcrumbs}>
@@ -102,22 +120,25 @@ export default function Show({ auth, travel, canEdit = false }: PageProps) {
                         className="inline-flex items-center gap-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium transition-colors"
                     >
                         <FiArrowLeft className="h-5 w-5" />
-                        Back to All Travels
+                        Back to All Trips
                     </Link>
 
                     {canEdit && (
-                        <Link
-                            href={route('travels.edit', travel.id)}
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold rounded-full hover:opacity-90 transition-all shadow-lg hover:shadow-xl"
-                        >
-                            <FiEdit2 className="h-5 w-5" />
-                            Edit Trip
-                        </Link>
+                        <>
+                            <Link
+                                href={route('travels.edit', travel.id)}
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold rounded-full hover:opacity-90 transition-all shadow-lg hover:shadow-xl"
+                            >
+                                <FiEdit2 className="h-5 w-5" />
+                                Edit Trip Details
+                            </Link>
+                        </>
                     )}
                 </div>
+
                 {/* Hero Section */}
                 <div className="relative rounded-b-3xl overflow-hidden shadow-xl">
-                    <div className="absolute inset-0 bg-gradient-to-r from-red-800/70 to-orange-600/70 dark:from-gray-900/70 dark:to-gray-900/70 z-10"></div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-800/50 to-orange-600/50 dark:from-gray-900/50 dark:to-gray-900/50 z-10"></div>
 
                     {travel.cover_image ? (
                         <div
@@ -165,12 +186,12 @@ export default function Show({ auth, travel, canEdit = false }: PageProps) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     {/* Info Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        {/* Travel Dates Card */}
+                        {/* Trip Dates Card */}
                         <Card className="border-0 shadow-lg dark:shadow-none dark:bg-zinc-800/50 dark:border dark:border-gray-700">
                             <CardContent className="p-6">
                                 <div className="flex items-center gap-3 mb-3">
                                     <FaCalendarAlt className="text-red-500" />
-                                    <h3 className="text-lg font-semibold">Travel Dates</h3>
+                                    <h3 className="text-lg font-semibold">Trip Dates</h3>
                                 </div>
                                 <p className="text-2xl font-bold mb-1">{duration}</p>
                                 <p className="text-gray-600 dark:text-gray-400">
@@ -179,13 +200,13 @@ export default function Show({ auth, travel, canEdit = false }: PageProps) {
                             </CardContent>
                         </Card>
 
-                        {/* Travel Companions Card */}
+                        {/* Trip Buddies Card */}
                         <Card className="border-0 shadow-lg dark:shadow-none dark:bg-zinc-800/50 dark:border dark:border-gray-700">
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-3">
                                         <FaUsers className="text-blue-500" />
-                                        <h3 className="text-lg font-semibold">Travel Companions</h3>
+                                        <h3 className="text-lg font-semibold">Trip Buddies</h3>
                                     </div>
                                     {canEdit && (
                                         <Link href={route('travels.invite', travel.id)}>
@@ -226,7 +247,7 @@ export default function Show({ auth, travel, canEdit = false }: PageProps) {
                                 {travel.invites?.sent && travel.invites.sent.length > 0 && (
                                     <div className="mt-4 pt-4 border-t dark:border-gray-700">
                                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                                            {travel.invites?.sent?.length ?? 0} pending invite{(travel.invites?.sent?.length ?? 0) === 1 ? '' : 's'}
+                                            {travel.invites?.sent?.filter(invite => invite.status === 'pending').length ?? 0} pending invite{(travel.invites?.sent?.filter(invite => invite.status === 'pending').length ?? 0) === 1 ? '' : 's'}
                                         </p>
                                         <Link href={route('travels.invites', travel.id)}>
                                             <Button variant="link" size="sm" className="p-0 h-auto">
@@ -238,39 +259,279 @@ export default function Show({ auth, travel, canEdit = false }: PageProps) {
                             </CardContent>
                         </Card>
 
-                        {/* Journey Card */}
+                        {/* Expenses Card */}
                         <Card className="border-0 shadow-lg dark:shadow-none dark:bg-zinc-800/50 dark:border dark:border-gray-700">
                             <CardContent className="p-6">
                                 <div className="flex items-center gap-3 mb-3">
                                     <FaMoneyBillWave className="text-green-500" />
-                                    <h3 className="text-lg font-semibold">Travel Budget</h3>
+                                    <h3 className="text-lg font-semibold">Your Travel Expenses</h3>
                                 </div>
                                 <div className="space-y-3">
+                                    {/* Flight Expenses Summary */}
                                     <div>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">Flight Tickets</p>
                                         <p className="font-medium">
-                                            {travel.flight_expenses ? `$${travel.flight_expenses}` : 'No tickets yet'}
+                                            {travel.flying_tickets?.length ?
+                                                `${formatEuro(travel.flying_tickets
+                                                    .filter(ticket => ticket.user_id === auth.user.id)
+                                                    .reduce((sum, ticket) => sum + (ticket.price || 0), 0))}`
+                                                : '0 €'}
                                         </p>
                                     </div>
+
+                                    {/* Hotel Expenses Summary */}
                                     <div>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">Hotel Expenses</p>
                                         <p className="font-medium">
-                                            {travel.hotel_expenses ? `$${travel.hotel_expenses}` : 'No hotels booked'}
+                                            {travel.hotel_reservations ?
+                                                `${formatEuro(travel.hotel_reservations
+                                                    .filter(reservation => reservation.user_id === auth.user.id)
+                                                    .reduce((sum, reservation) => sum + (reservation.price || 0), 0))}`
+                                                : '0 €'}
                                         </p>
                                     </div>
+
+                                    {/* Transportation Summary */}
                                     <div>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">Transportation</p>
                                         <p className="font-medium">
-                                            {travel.transportation_expenses ? `$${travel.transportation_expenses}` : 'No transport booked'}
+                                            {travel.transportations ?
+                                                `${formatEuro(travel.transportations
+                                                    .filter(transportation => transportation.user_id === auth.user.id)
+                                                    .reduce((sum: number, transportation: Transportations) => sum + (transportation.price || 0), 0))}`
+                                                : '0 €'}
                                         </p>
                                     </div>
+
+                                    {/* Total */}
                                     <div className="pt-2 border-t dark:border-gray-700">
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">Your Total</p>
                                         <p className="text-xl font-bold">
-                                            {hasExpenses ? `$${total_expenses_formatted}` : 'No expenses registered yet'}
+                                            {total_expenses_formatted}
                                         </p>
                                     </div>
                                 </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Expandable Cards Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        {/* Flight Tickets Card */}
+                        <Card className="border-0 shadow-lg dark:shadow-none dark:bg-zinc-800/50 dark:border dark:border-gray-700">
+                            <CardContent className="p-6">
+                                <div className="flex justify-between items-center mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <FaPlaneDeparture className="text-blue-500" />
+                                        <h3 className="text-lg font-semibold">Your Flight Tickets</h3>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {canEdit && (
+                                            <Button onClick={() => setFlyingTicketModalOpen(true)} size="sm" className="flex items-center gap-2">
+                                                <FiPlus className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setExpandedSection(prev => ({ ...prev, tickets: !prev.tickets }))}
+                                        >
+                                            {expandedSection.tickets ? 'Hide' : 'View'}
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {expandedSection.tickets ? (
+                                    travel.flying_tickets?.filter(t => t.user_id === auth.user.id)?.length ? (
+                                        travel.flying_tickets
+                                            .filter(ticket => ticket.user_id === auth.user.id)
+                                            .map(ticket => (
+                                                <div key={ticket.id} className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                                                    <div className="flex justify-between">
+                                                        <p className="font-medium">BOOKING REF: {ticket.ticket_number}</p>
+                                                        <p className="text-green-600 dark:text-green-400">${ticket.price}</p>
+                                                    </div>
+                                                    <div className="mt-2 text-sm">
+                                                        <p>
+                                                            <span className="font-medium">Departure:</span> {formatDate(ticket.departure_date)} <br />
+                                                            from {ticket.departure_airport}
+                                                        </p>
+                                                        <p>
+                                                            <span className="font-medium">Arrival:</span> {formatDate(ticket.arrival_date)} <br />
+                                                            at {ticket.arrival_airport}
+                                                        </p>
+                                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                            Status: <span className="capitalize">{ticket.status}</span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ))
+                                    ) : (
+                                        <div className="text-center py-4 text-gray-500">
+                                            <p>No flight tickets added yet</p>
+                                            {canEdit && (
+                                                <Button
+                                                    onClick={() => setFlyingTicketModalOpen(true)}
+                                                    className="mt-2 flex items-center gap-2"
+                                                    size="sm"
+                                                >
+                                                    <FiPlus className="h-4 w-4" />
+                                                    Add Ticket
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )
+                                ) : (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        {travel.flying_tickets?.filter(t => t.user_id === auth.user.id).length || 0} ticket(s)
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Reservations Card */}
+                        <Card className="border-0 shadow-lg dark:shadow-none dark:bg-zinc-800/50 dark:border dark:border-gray-700">
+                            <CardContent className="p-6">
+                                <div className="flex justify-between items-center mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <FaHotel className="text-red-500" />
+                                        <h3 className="text-lg font-semibold">Your Bookings</h3>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {canEdit && (
+                                            <Button onClick={() => setHotelReservationModalOpen(true)} size="sm" className="flex items-center gap-2">
+                                                <FiPlus className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setExpandedSection(prev => ({ ...prev, reservations: !prev.reservations }))}
+                                        >
+                                            {expandedSection.reservations ? 'Hide' : 'View'}
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {expandedSection.reservations ? (
+                                    travel.hotel_reservations?.filter(r => r.user_id === auth.user.id)?.length ? (
+                                        <div className="space-y-3">
+                                            {travel.hotel_reservations
+                                                .filter(r => r.user_id === auth.user.id)
+                                                .map(reservation => (
+                                                    reservation && (
+                                                        <div key={reservation.id} className="mt-2 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                                                            <p className="font-medium">{reservation.hotel_name}</p>
+                                                            <p className="text-green-600 dark:text-green-400">{reservation.price} €</p>
+                                                            <div className="mt-2 text-sm">
+                                                                <p>
+                                                                    <span className="font-medium">Check-in:</span> {formatDate(reservation.check_in_date)}
+                                                                </p>
+                                                                <p>
+                                                                    <span className="font-medium">Check-out:</span> {formatDate(reservation.check_out_date)}
+                                                                </p>
+                                                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                                    Room Type: <span className="capitalize">{reservation.room_type}</span>
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-4 text-gray-500">
+                                            <p>No hotels booked yet</p>
+                                            {canEdit && (
+                                                <Button
+                                                    onClick={() => setHotelReservationModalOpen(true)}
+                                                    className="mt-2 flex items-center gap-2"
+                                                    size="sm"
+                                                >
+                                                    <FiPlus className="h-4 w-4" />
+                                                    Add Hotel
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )
+                                ) : (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        {travel.hotel_reservations?.filter(r => r.user_id === auth.user.id).length || 0} reservation(s)
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Transportations Card */}
+                        <Card className="border-0 shadow-lg dark:shadow-none dark:bg-zinc-800/50 dark:border dark:border-gray-700">
+                            <CardContent className="p-6">
+                                <div className="flex justify-between items-center mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <FaBus className="text-green-500" />
+                                        <h3 className="text-lg font-semibold">Your Transportations</h3>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {canEdit && (
+                                            <Button onClick={() => setTransportationModalOpen(true)} size="sm" className="flex items-center gap-2">
+                                                <FiPlus className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setExpandedSection(prev => ({ ...prev, transportations: !prev.transportations }))}
+                                        >
+                                            {expandedSection.transportations ? 'Hide' : 'View'}
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {expandedSection.transportations ? (
+                                    travel.transportations?.filter(t => t.user_id === auth.user.id)?.length ? (
+                                        <div className="space-y-3">
+                                            {travel.transportations
+                                                .filter(t => t.user_id === auth.user.id)
+                                                .map(transportation => (
+                                                    transportation && (
+                                                        <div key={transportation.id} className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                                                            <div className="flex justify-between">
+                                                                <p className="font-medium capitalize">{transportation.transportation_type}</p>
+                                                                <p className="text-green-600 dark:text-green-400">{transportation.price} €</p>
+                                                            </div>
+                                                            <div className="mt-2 text-sm">
+                                                                <p>
+                                                                    <span className="font-medium">Departure:</span> {formatDate(transportation.departure_date)} at {transportation.departure_time}
+                                                                </p>
+                                                                <p>
+                                                                    <span className="font-medium">Arrival:</span> {formatDate(transportation.arrival_date)} at {transportation.arrival_time}
+                                                                </p>
+                                                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                                    {transportation.departure_location} → {transportation.arrival_location}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-4 text-gray-500">
+                                            <p>No transportations booked yet</p>
+                                            {canEdit && (
+                                                <Button
+                                                    onClick={() => setTransportationModalOpen(true)}
+                                                    className="mt-2 flex items-center gap-2"
+                                                    size="sm"
+                                                >
+                                                    <FiPlus className="h-4 w-4" />
+                                                    Add Transportation
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )
+                                ) : (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        {travel.transportations?.filter(t => t.user_id === auth.user.id).length || 0} transportation(s)
+                                    </p>
+                                )}
                             </CardContent>
                         </Card>
                     </div>
@@ -357,7 +618,7 @@ export default function Show({ auth, travel, canEdit = false }: PageProps) {
                                             <div className="text-center py-8 text-gray-500">
                                                 <FiMap className="h-12 w-12 mx-auto mb-4" />
                                                 <p>No cities added yet.</p>
-                                                <p className="mt-2">Add cities to create your travel itinerary.</p>
+
                                             </div>
                                         )}
                                     </div>
@@ -459,6 +720,36 @@ export default function Show({ auth, travel, canEdit = false }: PageProps) {
                         </div>
                     </div>
                 </div>
+                {/* Flying Ticket Modal */}
+                <FlyingTicketModal
+                    isOpen={isFlyingTicketModalOpen}
+                    onClose={() => setFlyingTicketModalOpen(false)}
+                    travelId={travel.id}
+                    userId={auth.user.id}
+                    onSuccess={() => {
+                        setFlyingTicketModalOpen(false);
+                    }}
+                />
+                {/* Hotel Reservation Modal */}
+                <HotelReservationModal
+                    isOpen={isHotelReservationModalOpen}
+                    onClose={() => setHotelReservationModalOpen(false)}
+                    travelId={travel.id}
+                    userId={auth.user.id}
+                    onSuccess={() => {
+                        setHotelReservationModalOpen(false);
+                    }}
+                />
+                {/* Transportations Modal */}
+                <TransportationsModal
+                    isOpen={isTransportationModalOpen}
+                    onClose={() => setTransportationModalOpen(false)}
+                    travelId={travel.id}
+                    userId={auth.user.id}
+                    onSuccess={() => {
+                        setTransportationModalOpen(false);
+                    }}
+                />
             </div>
         </AppLayout>
     );

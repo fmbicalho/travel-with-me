@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: TravelWithMe
+    runtime: docker
+    repo: https://github.com/fmbicalho/travel-with-me
+    branch: master
+    plan: free
+    autoDeploy: true

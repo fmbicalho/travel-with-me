@@ -87,6 +87,15 @@ class TravelController extends Controller
             'cities'  => function ($query) {
                 $query->orderBy('arrive_date', 'asc');
             },
+            'flying_tickets' => function ($query) {
+                $query->where('user_id', Auth::id());
+            },
+            'hotel_reservations' => function ($query) {
+                $query->where('user_id', Auth::id());
+            },
+            'transportations' => function ($query) {
+                $query->where('user_id', Auth::id());
+            },
         ]);
 
         $friends = Auth::user()->friends()->select('users.id', 'name', 'email', 'photo')->get();
@@ -153,6 +162,9 @@ class TravelController extends Controller
                     'spots'       => $city->spots,
                 ];
             }),
+            'flying_tickets' => $travel->flying_tickets,
+            'hotel_reservations' => $travel->hotel_reservations,
+            'transportations' => $travel->transportations,
         ];
 
         return Inertia::render('Travels/Show', [

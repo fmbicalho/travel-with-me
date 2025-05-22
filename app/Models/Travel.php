@@ -81,4 +81,19 @@ class Travel extends Model
     {
         return $this->members()->where('users.id', $user->id)->exists();
     }
+
+    public function flying_tickets()
+    {
+        return $this->hasMany(FlyingTicket::class);
+    }
+
+    public function hotel_reservations()
+    {
+        return $this->hasMany(HotelReservation::class);
+    }
+
+    public function transportations()
+    {
+        return $this->hasMany(Transportations::class);
+    }
 }

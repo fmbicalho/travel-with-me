@@ -176,3 +176,51 @@ export interface TravelInvite {
     travel?: Travel;
     sender?: User;
 }
+
+export interface FlyingTicket {
+    id: number;
+    user_id: number;
+    travel_id: number;
+    ticket_number: string;
+    departure_date: string;
+    arrival_date: string;
+    departure_airport: string;
+    arrival_airport: string;
+    price: number;
+    status: 'pending' | 'confirmed' | 'cancelled';
+    created_at: string;
+    updated_at: string;
+}
+
+export interface HotelReservation {
+    id: number;
+    user_id: number;
+    travel_id: number;
+    reservation_number: string;
+    check_in_date: string;
+    check_out_date: string;
+    hotel_name: string;
+    room_type: string;
+    price: number;
+    status: 'pending' | 'confirmed' | 'cancelled';
+    created_at: string;
+    updated_at: string;
+}
+
+export interface Transportations {
+    id: number;
+    user_id: number;
+    travel_id: number;
+    transportation_type: string;
+    departure_date: string;
+    arrival_date: string;
+    departure_time: string;
+    arrival_time: string;
+    departure_location: string;
+    arrival_location: string;
+    comments: string;
+    price: number;
+    status: 'pending' | 'confirmed' | 'cancelled';
+    created_at: string;
+    updated_at: string;
+}

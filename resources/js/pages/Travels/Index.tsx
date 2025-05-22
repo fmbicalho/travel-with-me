@@ -9,7 +9,7 @@ import locationsData from '../../../jsons/locations.json';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Travels',
+        title: 'Trips',
         href: '/travels',
     },
 ];
