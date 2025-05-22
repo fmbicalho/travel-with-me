@@ -22,4 +22,7 @@ export default defineConfig({
             'ziggy-js': resolve(__dirname, 'vendor/tightenco/ziggy'),
         },
     },
+    base: process.env.NODE_ENV === 'production' 
+        ? 'https://travel-with-me-ndtb.onrender.com/' 
+        : '/',
 });
